@@ -1,0 +1,74 @@
+name: Job Hunter
+on:
+  schedule:
+    - cron: '0 2 * * *' # Daily gate at 09:00 WIB; SQLite enforces every 3 calendar days.
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'tick respects schedule; run searches now and resets the next due date'
+        type: choice
+        options: [tick, run, status]
+        default: tick
+permissions:
+  contents: write
+concurrency:
+  group: job-hunter-private-state
+  cancel-in-progress: false
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - name: Check configuration
+        env:
+          CODE_REPOSITORY: ${{ vars.CODE_REPOSITORY }}
+        run: |
+          test -n "$CODE_REPOSITORY" || { echo 'Set CODE_REPOSITORY to the public owner/repo'; exit 1; }
+      - name: Restore private state
+        id: restore
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          path: runtime-state
+          persist-credentials: true
+      - name: Get public program
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ vars.CODE_REPOSITORY }}
+          ref: main
+          path: code
+          persist-credentials: false
+      - name: Search or wait until due
+        id: search
+        continue-on-error: true
+        env:
+          HUNTER_MODE: ${{ inputs.mode || 'tick' }}
+        working-directory: code
+        run: python scripts/cloud_run.py --state-dir ../runtime-state --mode "$HUNTER_MODE"
+      - name: Persist state and reports privately
+        if: ${{ always() && steps.restore.outcome == 'success' && steps.search.outcome != 'skipped' }}
+        working-directory: runtime-state
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/jobs.sqlite3
+          if test -d reports; then git add reports/; fi
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update job history and reports'
+            git push origin HEAD:main
+          fi
+      - name: Report run failure
+        if: ${{ steps.search.outcome == 'failure' }}
+        run: |
+          echo 'Search failed or only some sources succeeded. Inspect logs and private reports.'
+          exit 1
+      - name: Report location
+        if: ${{ always() }}
+        env:
+          STATE_REPOSITORY: ${{ github.repository }}
+        run: |
+          printf 'Reports and SQLite history remain in the private state repository.\n' >> "$GITHUB_STEP_SUMMARY"
+          printf '\n[Open private reports](https://github.com/%s/tree/main/reports)\n' "$STATE_REPOSITORY" >> "$GITHUB_STEP_SUMMARY"

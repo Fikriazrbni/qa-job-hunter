@@ -1,0 +1,27 @@
+{
+  "timezone": "Asia/Jakarta",
+  "interval_days": 3,
+  "hour": 9,
+  "minute": 0,
+  "freshness_days": 7,
+  "limit": 10,
+  "timeout_seconds": 25,
+  "data_dir": "data",
+  "report_dir": "output/automatic",
+  "profile": "profile.json",
+  "history_file": "job-hunter-history.md",
+  "sources": [
+    {"provider": "greenhouse", "board": "alpaca", "company": "Alpaca"},
+    {"provider": "greenhouse", "board": "soraunion", "company": "Sora Union"},
+    {"provider": "greenhouse", "board": "canonical", "company": "Canonical"},
+    {"provider": "greenhouse", "board": "pingidentity", "company": "Ping Identity"},
+    {"provider": "greenhouse", "board": "flex", "company": "Flex"},
+    {"provider": "lever", "board": "binance", "company": "Binance"},
+    {"provider": "ashby", "board": "circle", "company": "Circle"},
+    {"provider": "ashby", "board": "bjakcareer", "company": "Bjak"},
+    {"provider": "ashby", "board": "trust-wallet", "company": "Trust Wallet"},
+    {"provider": "ashby", "board": "windranger", "company": "Windranger"},
+    {"provider": "ashby", "board": "salmon-group", "company": "Salmon"},
+    {"provider": "ashby", "board": "dualentry", "company": "DualEntry"}
+  ]
+}

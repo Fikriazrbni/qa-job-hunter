@@ -1,0 +1,11 @@
+{
+  "reviewed": "2026-01-01",
+  "location": "Indonesia",
+  "automation_started": "2021-01-01",
+  "qa_started": "2020-01-01",
+  "english": "intermediate",
+  "citizenship_confirmed": false,
+  "skills": ["python", "typescript", "playwright", "selenium", "postman", "sql"],
+  "cv_unconfirmed_skills": ["cypress"],
+  "notes": "Synthetic example. Replace with skills and dates supported by your own CV."
+}
