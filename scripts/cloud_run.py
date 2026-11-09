@@ -40,7 +40,7 @@ def cloud_config(folder: Path, base: Path = ROOT / 'config.json'):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--state-dir', type=Path, required=True)
-    parser.add_argument('--mode', choices=['tick', 'run', 'status'], default='tick')
+    parser.add_argument('--mode', choices=['tick', 'run', 'status', 'discover'], default='tick')
     args = parser.parse_args(argv)
     folder = args.state_dir.resolve()
     try:
@@ -48,6 +48,13 @@ def main(argv=None):
         with tempfile.TemporaryDirectory(prefix='jobhunter-config-') as temp:
             config = Path(temp) / 'config.json'
             config.write_text(json.dumps(cloud_config(folder)))
+            if args.mode == 'discover':
+                sys.path.insert(0, str(ROOT))
+                from jobhunter.discovery import discover_sources
+                from jobhunter.service import load_config
+                _, summary = discover_sources(load_config(config))
+                print(json.dumps(summary, indent=2))
+                return 2 if summary.get('warnings') else 0
             return subprocess.run([sys.executable, '-m', 'jobhunter', '--config', str(config), args.mode], cwd=ROOT).returncode
     except (OSError, ValueError, sqlite3.Error) as exc:
         print(f'Cloud state unavailable: {type(exc).__name__}. Restore the private state repository; history was not reset.', file=sys.stderr)

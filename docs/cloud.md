@@ -64,3 +64,5 @@ State lives in `data/discovery.json` in the private state repository. The workfl
 Use `discovery.enabled: false` to return to the explicit watchlist. Limits can be adjusted with `max_career_pages` (1–50) and `max_new_boards` (1–30). Add an explicit `enabled: false` source entry to exclude a particular provider/board from discovery. The directory is refreshed on a future due/manual search; this does not create an additional daily scan. No paid service or AI API is used.
 
 Upstream: [Remote in Tech](https://github.com/remoteintech/remote-jobs), [company directory](https://remoteintech.company/companies/). The ISC notice from the fetched revision is stored alongside the cache. Only company/source metadata is reused; personal data is not sent to the directory or career pages.
+
+The private workflow also accepts **discover**: expand/validate the source list and update `discovery.md` without searching all jobs or changing `last_completed`/the next search date. Use this to advance the rotating career-page queue between scheduled searches. The new boards are searched by the next due `tick` or an explicit `run`.

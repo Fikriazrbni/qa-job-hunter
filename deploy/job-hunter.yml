@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'tick respects schedule; run searches now and resets the next due date'
+        description: 'tick: due search; run: search now/reset schedule; discover: expand sources only'
         type: choice
-        options: [tick, run, status]
+        options: [tick, run, status, discover]
         default: tick
 permissions:
   contents: write
