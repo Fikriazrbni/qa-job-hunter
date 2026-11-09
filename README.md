@@ -7,6 +7,7 @@ A scheduled Python job monitor for QA Automation, SDET, and Software Engineer in
 ## Features
 
 - Reads published jobs from a configurable company watchlist using Greenhouse, Lever, and Ashby public APIs.
+- Discovers additional verified ATS boards from Remote in Tech worldwide/APAC companies, with a persistent rotating career-page queue and coverage report.
 - Separates Indonesia/worldwide, APAC, ambiguous remote, and recognized location restrictions.
 - Ranks roles using an explicit skills profile and keeps human review in the loop.
 - Distinguishes publication dates from updates and first-seen dates.
@@ -54,7 +55,7 @@ flowchart LR
 
 ## Limits
 
-This monitors configured boards, not the entire job market. Recruiter LinkedIn posts and custom career pages need additional sources. Matching is deterministic and cannot replace a full CV/JD review. A geographic match is evidence from the listing, not a guarantee of hiring eligibility. Unknown dates remain unknown; a missing listing is not automatically declared closed. All potential matches require review before applying.
+This monitors configured and successfully discovered boards, not the entire job market. Remote in Tech directory labels never establish individual job eligibility. See the [discovery configuration and limits](docs/cloud.md#remote-in-tech-discovery). Recruiter LinkedIn posts and custom career pages need additional sources. Matching is deterministic and cannot replace a full CV/JD review. A geographic match is evidence from the listing, not a guarantee of hiring eligibility. Unknown dates remain unknown; a missing listing is not automatically declared closed. All potential matches require review before applying.
 
 The target schedule time is not a real-time guarantee. Cloud runs can be delayed. Partial source failures remain visible in reports and workflow status.
 

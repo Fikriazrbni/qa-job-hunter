@@ -29,6 +29,7 @@ def load_config(path: Path) -> dict:
         raise ValueError('Invalid local schedule time')
     if not 1 <= cfg['limit'] <= 100 or not 1 <= cfg['freshness_days'] <= 365:
         raise ValueError('Invalid report limit/freshness_days')
+    cfg['_disabled_sources'] = [s['provider'] + ':' + s['board'].lower() for s in cfg['sources'] if not s.get('enabled', True)]
     enabled = [s for s in cfg['sources'] if s.get('enabled', True)]
     identities = [s['provider'] + ':' + s['board'].lower() for s in enabled]
     if not enabled or len(identities) != len(set(identities)):
@@ -37,6 +38,13 @@ def load_config(path: Path) -> dict:
         if s['provider'] not in {'greenhouse', 'lever', 'ashby'} or not s.get('company'):
             raise ValueError('Invalid source definition')
     cfg['sources'] = enabled
+    discovery = cfg.get('discovery', {})
+    if not isinstance(discovery, dict):
+        raise ValueError('discovery must be an object')
+    for key, default, maximum in [('max_career_pages', 20, 50), ('max_new_boards', 15, 30)]:
+        value = discovery.get(key, default)
+        if type(value) is not int or not 1 <= value <= maximum:
+            raise ValueError(f'Invalid discovery {key}')
     return cfg
 
 
@@ -71,11 +79,17 @@ def perform_run(cfg: dict, fetcher=fetch_source, now=None) -> dict:
     try:
         imported = store.seed_history(Path(cfg['history_file']), timestamp)
         profile = json.loads(Path(cfg['profile']).read_text())
+        from .discovery import discover_sources
+        try:
+            configured, discovery = discover_sources(cfg, now)
+        except Exception as exc:
+            configured = cfg['sources']
+            discovery = {'enabled': bool(cfg.get('discovery', {}).get('enabled')), 'warnings': [f'Discovery failed: {type(exc).__name__}: {exc}']}
         run_id = store.start_run(timestamp)
         sources, events, successful = [], [], set()
         screened = fetched = 0
         with ThreadPoolExecutor(max_workers=4) as pool:
-            futures = {pool.submit(fetcher, s, cfg.get('timeout_seconds', 25)): s for s in cfg['sources']}
+            futures = {pool.submit(fetcher, s, cfg.get('timeout_seconds', 25)): s for s in configured}
             for future in as_completed(futures):
                 source = futures[future]
                 key = source['provider'] + ':' + source['board'].lower()
@@ -99,7 +113,7 @@ def perform_run(cfg: dict, fetcher=fetch_source, now=None) -> dict:
                 except Exception as exc:
                     # No reconciliation on failure: missing data is never treated as closure.
                     sources.append({'source': key, 'count': 0, 'error': f'{type(exc).__name__}: {exc}'})
-        outcome = 'success' if len(successful) == len(cfg['sources']) else 'partial' if successful else 'failed'
+        outcome = 'success' if len(successful) == len(configured) and not discovery.get('warnings') else 'partial' if successful else 'failed'
         # Undelivered events survive report/disk failures and are retried on a fresh source check.
         events = store.pending_events(successful)
         summary = {'successful_sources': len(successful), 'fetched': fetched, 'screened': screened,
@@ -107,7 +121,7 @@ def perform_run(cfg: dict, fetcher=fetch_source, now=None) -> dict:
                    'updated': sum(e['kind'] in {'updated', 'reappeared'} for e in events)}
         result = {'run_id': run_id, 'checked_at': timestamp, 'checked_local': now.astimezone(ZoneInfo(cfg['timezone'])).strftime('%Y-%m-%d %H:%M %Z'),
                   'outcome': outcome, 'summary': summary, 'sources': sorted(sources, key=lambda s: s['source']),
-                  'events': events, 'active': store.active(successful)}
+                  'events': events, 'active': store.active(successful), 'discovery': discovery}
         report = write_reports(Path(cfg['report_dir']), result, cfg['limit'])
         store.finish(run_id, timestamp if clock_injected else utcnow().isoformat(), outcome, summary,
                      [i for row in events for i in row.get('event_ids', [])])

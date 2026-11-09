@@ -65,10 +65,18 @@ def write_reports(folder: Path, result: dict, limit: int):
     warning = "Rules-only, tanpa AI. Skor adalah kecocokan kata kunci, bukan probabilitas diterima. Semua hasil tetap Review; baca sumber sebelum melamar. Verified hanya cakupan geografis berdasarkan aturan eksplisit, bukan jaminan authorization/entity."
     errors = "".join(f'<li><strong>{html.escape(x["source"])}</strong>: {html.escape(x["error"])}</li>' for x in result["sources"] if x.get("error")) or '<li>Tidak ada source error.</li>'
     heading = f'QA Job Hunter · {result["checked_local"]}'
+    discovery = result.get('discovery', {})
+    discovery_text = ''
+    if discovery.get('enabled'):
+        discovery_text = (f"Remote in Tech discovery: {discovery.get('directory_companies', 0)} companies; "
+                          f"{discovery.get('discovered_boards', 0)} discovered ATS boards; "
+                          f"{discovery.get('new_boards', 0)} added this run. "
+                          "Region perusahaan bukan bukti eligibility lowongan. Detail: discovery.md. "
+                          + ' '.join(discovery.get('warnings', [])))
     document = f'''<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(heading)}</title>
 <style>body{{font:15px/1.55 system-ui,sans-serif;max-width:1400px;margin:32px auto;padding:0 20px;color:#17212b;background:#fafbfd}}h1{{font-size:28px}}h2{{margin-top:32px}}.notice{{padding:16px;background:#eaf1fb;border-left:4px solid #305ab5}}table{{border-collapse:collapse;width:100%;background:white}}th,td{{padding:12px;border:1px solid #dbe2ec;vertical-align:top;text-align:left}}th{{background:#edf2f8}}a{{color:#204fa4}}small{{color:#556}}summary{{cursor:pointer;color:#204fa4}}details{{max-width:460px;margin-top:10px}}.scroll{{overflow:auto}}.meta{{color:#46576b}}</style>
 <h1>{html.escape(heading)}</h1><p class="meta">Run {result["run_id"]} · {result["outcome"]} · {result["summary"]["successful_sources"]}/{len(result["sources"])} sumber berhasil · {result["summary"]["screened"]} role QA disaring</p>
-<p class="notice">{html.escape(warning)}<br>Cakupan hanya watchlist config.json, bukan pencarian seluruh internet atau feed LinkedIn. Baru ditemukan ≠ baru dipublikasikan.</p>
+<p class="notice">{html.escape(warning)}<br>Cakupan watchlist dan board ATS hasil discovery yang berhasil divalidasi, bukan seluruh internet atau feed LinkedIn. Baru ditemukan ≠ baru dipublikasikan.<br>{html.escape(discovery_text)}</p>
 <h2>Baru / perubahan yang perlu ditinjau ({len(changed)})</h2>{table(changed[:limit])}
 <h2>Snapshot kandidat yang diperiksa pada run ini ({len(current)})</h2><p>Bagian ini dapat berisi hasil lama; tidak dihitung sebagai temuan baru.</p>{table(current[:limit])}
 <h2>Sumber yang bermasalah</h2><ul>{errors}</ul>
@@ -83,6 +91,8 @@ def write_reports(folder: Path, result: dict, limit: int):
     if not changed:
         markdown += ["", "Tidak ada kandidat baru/perubahan yang lolos filter awal."]
     markdown += ["", "## Kesehatan sumber", ""]
+    if discovery_text:
+        markdown += [discovery_text, '', '[Detail source discovery](discovery.md)', '']
     markdown += [f"- {s['source']}: {s.get('error') or str(s['count'])+' posting diperiksa'}" for s in result["sources"]]
     stem = f"run-{result['run_id']:05d}"
     data = json.dumps(result, indent=2, ensure_ascii=False)

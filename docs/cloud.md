@@ -46,3 +46,21 @@ Reports remain private. Read `reports/latest.md` directly on GitHub, or download
 GitHub schedules can start late. The [60-day inactivity suspension for public repositories](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule) does not apply to this private scheduled repository. Private Actions usage counts against your account's [included usage and billing settings](https://docs.github.com/en/billing/concepts/product-billing/github-actions). This project enables no paid runner or spending limit; exhausted account usage may stop execution.
 
 To return to local execution, disable the private workflow first, download its latest database, profile, and reports to the corresponding local locations while the local scheduler is stopped, then run local `status` and reinstall the local scheduler. Independent databases do not share deduplication.
+
+## Remote in Tech discovery
+
+The default `config.json` enables Remote in Tech as a company directory. It is not a job feed: its worldwide/APAC region labels only select companies to investigate. Every posting still goes through the existing location, date, role and CV screening rules.
+
+On actual searches (not waiting/status invocations), the runner:
+
+1. Refreshes company metadata at most weekly from a pinned commit archive of `remoteintech/remote-jobs` (no GitHub token required for this public read).
+2. Finds explicitly linked Greenhouse, Lever and Ashby boards; it does not guess tenant names.
+3. Checks up to 20 career pages in rotating batches, one page per company, with bounded size, timeout and four workers. Pages needing JavaScript/login, unsupported ATS systems or ambiguous multiple tenants remain manual review.
+4. Validates up to 15 new boards per run using their published-jobs endpoint before adding them to subsequent searches. Invalid candidates cool down for a week.
+5. Retains previously validated boards and the cached directory if the upstream directory is unavailable; reports expose directory refresh failures.
+
+State lives in `data/discovery.json` in the private state repository. The workflow must stage `data/` (lockfiles/journals remain ignored), not just the SQLite file. This also retains the upstream ISC license notice. `reports/discovery.md` lists the discovered ATS boards, page checks, manual-review gaps, and remaining queue; `latest.json` includes discovery counts and warnings. A successful search means its active boards were checked, not that every directory company was searched. New sources may surface older jobs for the first time; first-seen is not publication date.
+
+Use `discovery.enabled: false` to return to the explicit watchlist. Limits can be adjusted with `max_career_pages` (1–50) and `max_new_boards` (1–30). Add an explicit `enabled: false` source entry to exclude a particular provider/board from discovery. The directory is refreshed on a future due/manual search; this does not create an additional daily scan. No paid service or AI API is used.
+
+Upstream: [Remote in Tech](https://github.com/remoteintech/remote-jobs), [company directory](https://remoteintech.company/companies/). The ISC notice from the fetched revision is stored alongside the cache. Only company/source metadata is reused; personal data is not sent to the directory or career pages.
